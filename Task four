@@ -1,0 +1,101 @@
+package com.example.welcome_to_androidstudio
+
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import com.example.welcome_to_androidstudio.iu.LoginScreen
+import com.example.welcome_to_androidstudio.ui.theme.Welcome_TO_AndroidstudioTheme
+import com.google.firebase.auth.FirebaseAuth
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+
+class MainActivity : ComponentActivity() {
+
+    private lateinit var auth: FirebaseAuth
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // 🔐 Initialize Firebase Authentication
+        auth = FirebaseAuth.getInstance()
+
+        // 🌐 Retrofit API call to fetch posts
+        RetrofitClient.apiService.getPosts().enqueue(object : Callback<List<Post>> {
+            override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
+                if (response.isSuccessful) {
+                    val posts = response.body()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Fetched ${posts?.size ?: 0} posts",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Error: ${response.code()}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            override fun onFailure(call: Call<List<Post>>, t: Throwable) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "API Failed: ${t.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        })
+
+        // 🎨 Show Login UI using Compose
+        setContent {
+            Welcome_TO_AndroidstudioTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    LoginScreen(
+                        onLogin = { email, password -> loginUser(email, password) },
+                        onSignup = { email, password -> signUpUser(email, password) }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun loginUser(email: String, password: String) {
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Login failed: ${task.exception?.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+    }
+
+    private fun signUpUser(email: String, password: String) {
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Toast.makeText(this, "Signup successful", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Signup failed: ${task.exception?.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+    }
+}
